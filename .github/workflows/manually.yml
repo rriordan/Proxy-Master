@@ -33,11 +33,10 @@ jobs:
           git config --local user.name "MuRongPIG"
           git add -A
           git commit -m "Update Proxies (`date '+%F %H:%M %Z'`)" -a
-          git branch -u origin/main
+         
           
-      - name: Push changes
+       - name: Push changes
         uses: ad-m/github-push-action@v0.6.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: main 
-          force: true
+          branch: test  # <- change to match current branch!   
