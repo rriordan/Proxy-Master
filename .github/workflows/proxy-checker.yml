@@ -1,0 +1,44 @@
+name: Proxy Checker
+
+on:
+  workflow_dispatch:
+    inputs:
+      workers:
+        description: "Number of concurrent threads"
+        required: false
+        default: "128"
+
+jobs:
+  run-proxy-checker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests rich pysocks
+
+      - name: Run proxy checker
+        run: |
+          echo "Using ${{ github.event.inputs.workers }} workers..."
+          python checkproxy.py ${{ github.event.inputs.workers }}
+
+      - name: Commit updated proxy results
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Action"
+          git add *_checked.txt
+          git commit -m "Auto-check proxies: $(date)" || echo "No changes"
+      - name: Push changes
+        uses: ad-m/github-push-action@v0.6.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: main
