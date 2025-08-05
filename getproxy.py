@@ -14,7 +14,9 @@ class Downloadproxies():
         "https://sunny9577.github.io/proxy-scraper/generated/socks4_proxies.txt",
         'https://cdn.rei.my.id/proxy/SOCKS4',
 
-        "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks4.txt", 
+        "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks4.txt",
+        # My addition
+        "https://raw.githubusercontent.com/mzyui/proxy-list/refs/heads/main/socks4.txt",
         "https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS4_RAW.txt",
         'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/socks4.txt',
         'https://raw.githubusercontent.com/mmpx12/proxy-list/master/socks4.txt',
@@ -46,6 +48,8 @@ class Downloadproxies():
 
         "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt",
         "https://raw.githubusercontent.com/hookzof/socks5_list/master/proxy.txt",
+        # My addition
+        "https://raw.githubusercontent.com/mzyui/proxy-list/refs/heads/main/socks5.txt",
         "https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS5_RAW.txt",
         'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/socks5.txt',
         'https://raw.githubusercontent.com/mmpx12/proxy-list/master/socks5.txt',
@@ -80,6 +84,8 @@ class Downloadproxies():
         'https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/http.txt',
         "https://raw.githubusercontent.com/roosterkid/openproxylist/main/HTTPS_RAW.txt",
         'https://github.com/monosans/proxy-list/raw/main/proxies/http.txt',
+         # My addition
+        'https://raw.githubusercontent.com/mzyui/proxy-list/refs/heads/main/http.txt',                                                                       
         'https://github.com/mmpx12/proxy-list/raw/master/http.txt',
         'https://github.com/mmpx12/proxy-list/raw/master/https.txt',
         'https://raw.githubusercontent.com/Zaeem20/FREE_PROXIES_LIST/master/http.txt',
