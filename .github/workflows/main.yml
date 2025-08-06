@@ -3,7 +3,7 @@ name: get proxy
 on:
   workflow_dispatch:  # ✅ allows manual runs
   schedule:
-    - cron: '*/180 * * * *'  # ⏰ every 3 hours
+    - cron: '*/480 * * * *'  # ⏰ every 8 hours
 
 jobs:
   build:
