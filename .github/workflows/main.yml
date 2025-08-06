@@ -1,47 +1,46 @@
 name: get proxy
 
 on:
+  workflow_dispatch:  # ✅ allows manual runs
   schedule:
-  - cron: '*/180 * * * *'
+    - cron: '*/180 * * * *'  # ⏰ every 3 hours
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repo content
-        uses: actions/checkout@v2 
-    
-      - name: Setup python
+        uses: actions/checkout@v2
+
+      - name: Setup Python
         uses: actions/setup-python@v2
         with:
           python-version: '3.10'
-          
-      - name: Install python packages
+
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests
-          pip install rich
-          pip install pysocks
-          
-      - name: Pull files
+          pip install requests rich pysocks
+
+      - name: Pull latest from main
         run: |
           git config --local user.email "murongpig@foxmail.com"
           git config --local user.name "MuRongPIG"
           git pull origin main
-      
+
       - name: Get proxies
         run: |
           python getproxy.py
           python checkproxy.py 256
 
-      - name: Commit files
+      - name: Commit changes if any
         run: |
           git add -A
-          git commit -m "Update Proxies (`date '+%F %H:%M %Z'`)" -a
-          git branch -u origin/main
-          
+          git commit -m "Update Proxies ($(date '+%F %H:%M %Z'))" || echo "No changes to commit"
+
       - name: Push changes
         uses: ad-m/github-push-action@v0.6.0
         with:
-          github_token: ${{ secrets.TOKEN_GITHUB }}
-          branch: main 
+          github_token: ${{ secrets.GITHUB_TOKEN }}  # ✅ fix: use built-in secret
+          branch: main
