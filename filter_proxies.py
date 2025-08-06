@@ -9,7 +9,7 @@ import multiprocessing
 # Configuration
 TEST_URL = "https://httpbin.org/ip"  # Recommended lightweight endpoint
 TIMEOUT = 3
-MAX_WORKERS = min(128, (multiprocessing.cpu_count() * 20))
+MAX_WORKERS = 512
 
 # Input files by protocol
 PROXY_SOURCES = {
