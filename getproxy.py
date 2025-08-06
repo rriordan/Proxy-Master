@@ -9,14 +9,18 @@ class Downloadproxies():
         "https://api.proxyscrape.com/?request=displayproxies&proxytype=socks4&timeout=10000&country=all&simplified=true",
         "https://www.proxy-list.download/api/v1/get?type=socks4",
         "https://api.openproxylist.xyz/socks4.txt",
-        'https://openproxy.space/list/socks4',
         'https://proxyspace.pro/socks4.txt',
         "https://sunny9577.github.io/proxy-scraper/generated/socks4_proxies.txt",
+        
+        # Server Down
+        'https://openproxy.space/list/socks4',
         'https://cdn.rei.my.id/proxy/SOCKS4',
-
-        "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks4.txt",
+        
         # My addition
         "https://raw.githubusercontent.com/mzyui/proxy-list/refs/heads/main/socks4.txt",
+        
+        # Github Lists
+        "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks4.txt",
         "https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS4_RAW.txt",
         'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/socks4.txt',
         'https://raw.githubusercontent.com/mmpx12/proxy-list/master/socks4.txt',
@@ -34,7 +38,7 @@ class Downloadproxies():
         'https://raw.githubusercontent.com/zloi-user/hideip.me/main/socks4.txt',
         'https://raw.githubusercontent.com/ErcinDedeoglu/proxies/main/proxies/socks4.txt',
         'https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/protocols/socks4/data.txt'
-
+        
          ],
      'socks5': [
         "https://api.proxyscrape.com/v2/?request=getproxies&protocol=socks5&timeout=10000&country=all&simplified=true",
