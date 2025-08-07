@@ -143,7 +143,7 @@ if __name__ == "__main__":
     else:
         workers = input("Worker number: (32)")
     if not workers or not workers.isdigit():
-        workers = 96
+        workers = 350
     else:
         workers = int(workers)
     if workers >= 4096:

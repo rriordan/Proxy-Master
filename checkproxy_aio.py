@@ -11,7 +11,6 @@ from rich.progress import (
     TaskProgressColumn,
     TimeElapsedColumn,
     TimeRemainingColumn,
-    MofNCompleteColumn,
 )
 
 CHECK_TIMEOUT_SECONDS = 15
@@ -39,16 +38,23 @@ def load_proxies() -> list[Proxy]:
 
 
 async def check_proxy(client: httpx.AsyncClient, proxy: Proxy) -> Proxy | None:
+    """
+    Routes the request through the proxy under test.
+    Uses a dict with "http://" and "https://" keys so httpx applies it correctly.
+    """
     try:
         resp = await client.get(
             "https://httpbin.org/ip",
-            proxies=proxy.link,
+            proxies={
+                "http://": proxy.link,
+                "https://": proxy.link,
+            },
             timeout=CHECK_TIMEOUT_SECONDS,
         )
         if resp.status_code == 200:
             return proxy
     except Exception:
-        return None
+        return None  # silent failure for this proxy
 
 
 async def run_checker(workers: int):
@@ -59,7 +65,6 @@ async def run_checker(workers: int):
     semaphore = asyncio.Semaphore(workers)
 
     async with httpx.AsyncClient() as client:
-        # Use a synchronous context manager for Progress
         with Progress(
             TextColumn("[green]I[/green]:"),
             SpinnerColumn(),
@@ -70,7 +75,7 @@ async def run_checker(workers: int):
             TimeElapsedColumn(),
             TextColumn("• ETA:"),
             TimeRemainingColumn(),
-            TextColumn("• Left: {task.total - task.completed}"),
+            TextColumn("• Left: {task.remaining}"),
             TextColumn("• {task.fields[rate]:.2f} req/s"),
         ) as progress:
             task = progress.add_task("Checking proxies...", total=total, rate=0.0)
@@ -96,8 +101,10 @@ async def run_checker(workers: int):
         writer = csv.DictWriter(csvfile, fieldnames=protocols)
         writer.writeheader()
         for i in range(max_rows):
-            row = {proto: (results[proto][i] if i < len(results[proto]) else "")
-                   for proto in protocols}
+            row = {
+                proto: (results[proto][i] if i < len(results[proto]) else "")
+                for proto in protocols
+            }
             writer.writerow(row)
 
     print(f"\nI: Completed in {duration:.2f}s — average {avg_rate:.2f} proxies/s")
