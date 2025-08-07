@@ -1,9 +1,9 @@
 name: get proxy
 
 on:
-  workflow_dispatch:  # ✅ allows manual runs
+  workflow_dispatch:      # allows manual runs
   schedule:
-    - cron: '*/480 * * * *'  # ⏰ every 8 hours
+    - cron: '*/480 * * * *'  # every 8 hours
 
 jobs:
   build:
@@ -11,7 +11,9 @@ jobs:
 
     steps:
       - name: Checkout repo content
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0       # <— fetch full history so pushes can fast-forward
 
       - name: Setup Python
         uses: actions/setup-python@v2
@@ -23,12 +25,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests rich pysocks
 
-      - name: Pull latest from main
-        run: |
-          git config --local user.email "murongpig@foxmail.com"
-          git config --local user.name "MuRongPIG"
-          git pull origin main
-
       - name: Get proxies
         run: |
           python getproxy.py
@@ -36,11 +32,21 @@ jobs:
 
       - name: Commit changes if any
         run: |
-          git add -A
-          git commit -m "Update Proxies ($(date '+%F %H:%M %Z'))" || echo "No changes to commit"
+          git config user.email  "murongpig@foxmail.com"
+          git config user.name   "MuRongPIG"
+          # Stage only the files you know get updated:
+          git add http.txt socks4.txt socks5.txt TestProxySheet.csv
+          # If proxies-checker also writes *_checked.txt, add them too:
+          git add *_checked.txt || true
+          # Commit only when there are changes
+          if ! git diff --cached --quiet; then
+            git commit -m "Update Proxies ($(date '+%F %H:%M %Z'))"
+          else
+            echo "No changes to commit"
+          fi
 
       - name: Push changes
         uses: ad-m/github-push-action@v0.6.0
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}  # ✅ fix: use built-in secret
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           branch: main
