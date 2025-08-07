@@ -2,220 +2,209 @@ import json
 import datetime
 import requests
 import re
-class Downloadproxies():
+import csv
+from datetime import datetime as dt
+from pathlib import Path
+
+class DownloadProxies:
+    """
+    Scrape free proxy lists, dedupe by protocol, write .txt files and
+    a consolidated CSV (TestProxySheet.csv) with a timestamp, counts,
+    and three columns: HTTP, SOCKS4, SOCKS5.
+    """
     def __init__(self) -> None:
         self.api = {
-    'socks4':[
-        "https://api.proxyscrape.com/?request=displayproxies&proxytype=socks4&timeout=10000&country=all&simplified=true",
-        "https://www.proxy-list.download/api/v1/get?type=socks4",
-        "https://api.openproxylist.xyz/socks4.txt",
-        'https://proxyspace.pro/socks4.txt',
-        "https://sunny9577.github.io/proxy-scraper/generated/socks4_proxies.txt",
-        
-        # Server Down
-        'https://openproxy.space/list/socks4',
-        'https://cdn.rei.my.id/proxy/SOCKS4',
-        
-        # My addition
-        "https://raw.githubusercontent.com/mzyui/proxy-list/refs/heads/main/socks4.txt",
-        
-        # Github Lists
-        "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks4.txt",
-        "https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS4_RAW.txt",
-        'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/socks4.txt',
-        'https://raw.githubusercontent.com/mmpx12/proxy-list/master/socks4.txt',
-        'https://raw.githubusercontent.com/Zaeem20/FREE_PROXIES_LIST/master/socks4.txt',
-        'https://raw.githubusercontent.com/Anonym0usWork1221/Free-Proxies/main/proxy_files/socks4_proxies.txt',
-        'https://raw.githubusercontent.com/Noctiro/getproxy/master/file/socks4.txt',
-        'https://raw.githubusercontent.com/zevtyardt/proxy-list/main/socks4.txt',
-        'https://raw.githubusercontent.com/yemixzy/proxy-list/main/proxies/socks4.txt',
-        'https://raw.githubusercontent.com/ArrayIterator/proxy-lists/main/proxies/socks4.txt',
-        'https://raw.githubusercontent.com/zenjahid/FreeProxy4u/master/socks4.txt',
-        'https://raw.githubusercontent.com/Vann-Dev/proxy-list/main/proxies/socks4.txt',
-        'https://raw.githubusercontent.com/tuanminpay/live-proxy/master/socks4.txt',
-        'https://raw.githubusercontent.com/BreakingTechFr/Proxy_Free/main/proxies/socks4.txt',
-        'https://raw.githubusercontent.com/vakhov/fresh-proxy-list/master/socks4.txt',
-        'https://raw.githubusercontent.com/zloi-user/hideip.me/main/socks4.txt',
-        'https://raw.githubusercontent.com/ErcinDedeoglu/proxies/main/proxies/socks4.txt',
-        'https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/protocols/socks4/data.txt'
-        
-         ],
-     'socks5': [
-        "https://api.proxyscrape.com/v2/?request=getproxies&protocol=socks5&timeout=10000&country=all&simplified=true",
-        "https://www.proxy-list.download/api/v1/get?type=socks5",
-        "https://api.openproxylist.xyz/socks5.txt",
-        'https://openproxy.space/list/socks5',
-        'https://spys.me/socks.txt',
-        'https://proxyspace.pro/socks5.txt',
-        "https://sunny9577.github.io/proxy-scraper/generated/socks5_proxies.txt",
-        'https://cdn.rei.my.id/proxy/SOCKS5',
+            'socks4': [
+                "https://api.proxyscrape.com/?request=displayproxies&proxytype=socks4&timeout=10000&country=all&simplified=true",
+                "https://www.proxy-list.download/api/v1/get?type=socks4",
+                "https://api.openproxylist.xyz/socks4.txt",
+                "https://proxyspace.pro/socks4.txt",
+                "https://sunny9577.github.io/proxy-scraper/generated/socks4_proxies.txt",
+                'https://openproxy.space/list/socks4',
+                'https://cdn.rei.my.id/proxy/SOCKS4',
+                "https://raw.githubusercontent.com/mzyui/proxy-list/refs/heads/main/socks4.txt",
+                "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks4.txt",
+                "https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS4_RAW.txt",
+                'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/socks4.txt',
+                'https://raw.githubusercontent.com/mmpx12/proxy-list/master/socks4.txt',
+                'https://raw.githubusercontent.com/Zaeem20/FREE_PROXIES_LIST/master/socks4.txt',
+                'https://raw.githubusercontent.com/Anonym0usWork1221/Free-Proxies/main/proxy_files/socks4_proxies.txt',
+                'https://raw.githubusercontent.com/Noctiro/getproxy/master/file/socks4.txt',
+                'https://raw.githubusercontent.com/zevtyardt/proxy-list/main/socks4.txt',
+                'https://raw.githubusercontent.com/yemixzy/proxy-list/main/proxies/socks4.txt',
+                'https://raw.githubusercontent.com/ArrayIterator/proxy-lists/main/proxies/socks4.txt',
+                'https://raw.githubusercontent.com/zenjahid/FreeProxy4u/master/socks4.txt',
+                'https://raw.githubusercontent.com/Vann-Dev/proxy-list/main/proxies/socks4.txt',
+                'https://raw.githubusercontent.com/tuanminpay/live-proxy/master/socks4.txt',
+                'https://raw.githubusercontent.com/BreakingTechFr/Proxy_Free/main/proxies/socks4.txt',
+                'https://raw.githubusercontent.com/vakhov/fresh-proxy-list/master/socks4.txt',
+                'https://raw.githubusercontent.com/zloi-user/hideip.me/main/socks4.txt',
+                'https://raw.githubusercontent.com/ErcinDedeoglu/proxies/main/proxies/socks4.txt',
+                'https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/protocols/socks4/data.txt'
+            ],
+            'socks5': [
+                "https://api.proxyscrape.com/v2/?request=getproxies&protocol=socks5&timeout=10000&country=all&simplified=true",
+                "https://www.proxy-list.download/api/v1/get?type=socks5",
+                "https://api.openproxylist.xyz/socks5.txt",
+                'https://openproxy.space/list/socks5',
+                'https://spys.me/socks.txt',
+                'https://proxyspace.pro/socks5.txt',
+                "https://sunny9577.github.io/proxy-scraper/generated/socks5_proxies.txt",
+                'https://cdn.rei.my.id/proxy/SOCKS5',
+                "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt",
+                "https://raw.githubusercontent.com/hookzof/socks5_list/master/proxy.txt",
+                "https://raw.githubusercontent.com/mzyui/proxy-list/refs/heads/main/socks5.txt",
+                "https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS5_RAW.txt",
+                'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/socks5.txt',
+                'https://raw.githubusercontent.com/mmpx12/proxy-list/master/socks5.txt',
+                'https://raw.githubusercontent.com/Anonym0usWork1221/Free-Proxies/main/proxy_files/socks5_proxies.txt',
+                'https://raw.githubusercontent.com/Noctiro/getproxy/master/file/socks5.txt',
+                'https://raw.githubusercontent.com/zevtyardt/proxy-list/main/socks5.txt',
+                'https://raw.githubusercontent.com/yemixzy/proxy-list/main/proxies/socks5.txt',
+                'https://raw.githubusercontent.com/ArrayIterator/proxy-lists/main/proxies/socks5.txt',
+                'https://raw.githubusercontent.com/zenjahid/FreeProxy4u/master/socks5.txt',
+                'https://raw.githubusercontent.com/Vann-Dev/proxy-list/main/proxies/socks5.txt',
+                'https://raw.githubusercontent.com/tuanminpay/live-proxy/master/socks5.txt',
+                'https://raw.githubusercontent.com/BreakingTechFr/Proxy_Free/main/proxies/socks5.txt',
+                'https://raw.githubusercontent.com/vakhov/fresh-proxy-list/master/socks5.txt',
+                'https://raw.githubusercontent.com/zloi-user/hideip.me/main/socks5.txt',
+                'https://raw.githubusercontent.com/ErcinDedeoglu/proxies/main/proxies/socks5.txt',
+                'https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/protocols/socks5/data.txt'
+            ],
+            'http': [
+                "https://api.proxyscrape.com/?request=displayproxies&proxytype=http&timeout=10000&country=all&simplified=true",
+                "https://www.proxy-list.download/api/v1/get?type=http",
+                "https://www.proxy-list.download/api/v1/get?type=https",
+                "https://spys.me/proxy.txt",
+                "https://api.openproxylist.xyz/http.txt",
+                'https://openproxy.space/list/http',
+                'https://proxyspace.pro/http.txt',
+                'https://proxyspace.pro/https.txt',
+                "https://sunny9577.github.io/proxy-scraper/generated/http_proxies.txt",
+                'https://cdn.rei.my.id/proxy/HTTP',
+                'https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/http.txt',
+                "https://raw.githubusercontent.com/roosterkid/openproxylist/main/HTTPS_RAW.txt",
+                'https://github.com/monosans/proxy-list/raw/main/proxies/http.txt',
+                'https://raw.githubusercontent.com/mzyui/proxy-list/refs/heads/main/http.txt',
+                'https://github.com/mmpx12/proxy-list/raw/master/http.txt',
+                'https://github.com/mmpx12/proxy-list/raw/master/https.txt',
+                'https://raw.githubusercontent.com/Zaeem20/FREE_PROXIES_LIST/master/http.txt',
+                'https://raw.githubusercontent.com/Zaeem20/FREE_PROXIES_LIST/master/https.txt',
+                'https://raw.githubusercontent.com/Anonym0usWork1221/Free-Proxies/main/proxy_files/http_proxies.txt',
+                'https://raw.githubusercontent.com/Anonym0usWork1221/Free-Proxies/main/proxy_files/https_proxies.txt',
+                'https://raw.githubusercontent.com/Noctiro/getproxy/master/file/http.txt',
+                'https://raw.githubusercontent.com/Noctiro/getproxy/master/file/https.txt',
+                'https://raw.githubusercontent.com/zevtyardt/proxy-list/main/http.txt',
+                'https://raw.githubusercontent.com/yemixzy/proxy-list/main/proxies/http.txt',
+                'https://raw.githubusercontent.com/ArrayIterator/proxy-lists/main/proxies/http.txt',
+                'https://raw.githubusercontent.com/ArrayIterator/proxy-lists/main/proxies/https.txt',
+                'https://raw.githubusercontent.com/zenjahid/FreeProxy4u/master/http.txt',
+                'https://raw.githubusercontent.com/Vann-Dev/proxy-list/main/proxies/http.txt',
+                'https://raw.githubusercontent.com/Vann-Dev/proxy-list/main/proxies/https.txt',
+                'https://raw.githubusercontent.com/tuanminpay/live-proxy/master/http.txt',
+                'https://raw.githubusercontent.com/BreakingTechFr/Proxy_Free/main/proxies/http.txt',
+                'https://raw.githubusercontent.com/vakhov/fresh-proxy-list/master/http.txt',
+                'https://raw.githubusercontent.com/vakhov/fresh-proxy-list/master/https.txt',
+                'https://raw.githubusercontent.com/zloi-user/hideip.me/main/http.txt',
+                'https://raw.githubusercontent.com/zloi-user/hideip.me/main/https.txt',
+                'https://raw.githubusercontent.com/ErcinDedeoglu/proxies/main/proxies/http.txt',
+                'https://raw.githubusercontent.com/ErcinDedeoglu/proxies/main/proxies/https.txt',
+                'https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/protocols/http/data.txt',
+                'https://raw.githubusercontent.com/aslisk/proxyhttps/main/https.txt',
+                'https://raw.githubusercontent.com/saisuiu/uiu/main/free.txt',
+                'https://raw.githubusercontent.com/berkay-digital/Proxy-Scraper/main/proxies.txt',
+                'https://raw.githubusercontent.com/MrMarble/proxy-list/main/all.txt'
+            ]
+        }
+        self.proxy_dict = { 'socks4': set(), 'socks5': set(), 'http': set() }
 
-        "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt",
-        "https://raw.githubusercontent.com/hookzof/socks5_list/master/proxy.txt",
-        # My addition
-        "https://raw.githubusercontent.com/mzyui/proxy-list/refs/heads/main/socks5.txt",
-        "https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS5_RAW.txt",
-        'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/socks5.txt',
-        'https://raw.githubusercontent.com/mmpx12/proxy-list/master/socks5.txt',
-        # 'https://raw.githubusercontent.com/Zaeem20/FREE_PROXIES_LIST/master/socks5.txt',
-        'https://raw.githubusercontent.com/Anonym0usWork1221/Free-Proxies/main/proxy_files/socks5_proxies.txt',
-        'https://raw.githubusercontent.com/Noctiro/getproxy/master/file/socks5.txt',
-        'https://raw.githubusercontent.com/zevtyardt/proxy-list/main/socks5.txt',
-        'https://raw.githubusercontent.com/yemixzy/proxy-list/main/proxies/socks5.txt',
-        'https://raw.githubusercontent.com/ArrayIterator/proxy-lists/main/proxies/socks5.txt',
-        'https://raw.githubusercontent.com/zenjahid/FreeProxy4u/master/socks5.txt',
-        'https://raw.githubusercontent.com/Vann-Dev/proxy-list/main/proxies/socks5.txt',
-        'https://raw.githubusercontent.com/tuanminpay/live-proxy/master/socks5.txt',
-        'https://raw.githubusercontent.com/BreakingTechFr/Proxy_Free/main/proxies/socks5.txt',
-        'https://raw.githubusercontent.com/vakhov/fresh-proxy-list/master/socks5.txt',
-        'https://raw.githubusercontent.com/zloi-user/hideip.me/main/socks5.txt',
-        'https://raw.githubusercontent.com/ErcinDedeoglu/proxies/main/proxies/socks5.txt',
-        'https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/protocols/socks5/data.txt'
-
-         ],
-     'http': [
-        "https://api.proxyscrape.com/?request=displayproxies&proxytype=http&timeout=10000&country=all&simplified=true",
-        "https://www.proxy-list.download/api/v1/get?type=http",
-        'https://www.proxy-list.download/api/v1/get?type=https'
-        "https://spys.me/proxy.txt",
-        "https://api.openproxylist.xyz/http.txt",
-        'https://openproxy.space/list/http',
-        'https://proxyspace.pro/http.txt',
-        'https://proxyspace.pro/https.txt',
-        "https://sunny9577.github.io/proxy-scraper/generated/http_proxies.txt",
-        'https://cdn.rei.my.id/proxy/HTTP',
-        
-        'https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/http.txt',
-        "https://raw.githubusercontent.com/roosterkid/openproxylist/main/HTTPS_RAW.txt",
-        'https://github.com/monosans/proxy-list/raw/main/proxies/http.txt',
-         # My addition
-        'https://raw.githubusercontent.com/mzyui/proxy-list/refs/heads/main/http.txt',                                                                       
-        'https://github.com/mmpx12/proxy-list/raw/master/http.txt',
-        'https://github.com/mmpx12/proxy-list/raw/master/https.txt',
-        'https://raw.githubusercontent.com/Zaeem20/FREE_PROXIES_LIST/master/http.txt',
-        'https://raw.githubusercontent.com/Zaeem20/FREE_PROXIES_LIST/master/https.txt',
-        'https://raw.githubusercontent.com/Anonym0usWork1221/Free-Proxies/main/proxy_files/http_proxies.txt',
-        'https://raw.githubusercontent.com/Anonym0usWork1221/Free-Proxies/main/proxy_files/https_proxies.txt',
-        'https://raw.githubusercontent.com/Noctiro/getproxy/master/file/http.txt',
-        'https://raw.githubusercontent.com/Noctiro/getproxy/master/file/https.txt',
-        'https://raw.githubusercontent.com/zevtyardt/proxy-list/main/http.txt',
-        'https://raw.githubusercontent.com/yemixzy/proxy-list/main/proxies/http.txt',
-        'https://raw.githubusercontent.com/ArrayIterator/proxy-lists/main/proxies/http.txt',
-        'https://raw.githubusercontent.com/ArrayIterator/proxy-lists/main/proxies/https.txt',
-        'https://raw.githubusercontent.com/zenjahid/FreeProxy4u/master/http.txt',
-        'https://raw.githubusercontent.com/Vann-Dev/proxy-list/main/proxies/http.txt',
-        'https://raw.githubusercontent.com/Vann-Dev/proxy-list/main/proxies/https.txt',
-        'https://raw.githubusercontent.com/tuanminpay/live-proxy/master/http.txt',
-        'https://raw.githubusercontent.com/BreakingTechFr/Proxy_Free/main/proxies/http.txt',
-        'https://raw.githubusercontent.com/vakhov/fresh-proxy-list/master/http.txt',
-        'https://raw.githubusercontent.com/vakhov/fresh-proxy-list/master/https.txt',
-        'https://raw.githubusercontent.com/zloi-user/hideip.me/main/http.txt',
-        'https://raw.githubusercontent.com/zloi-user/hideip.me/main/https.txt',
-        'https://raw.githubusercontent.com/ErcinDedeoglu/proxies/main/proxies/http.txt',
-        'https://raw.githubusercontent.com/ErcinDedeoglu/proxies/main/proxies/https.txt',
-        'https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/protocols/http/data.txt',
-
-        'https://raw.githubusercontent.com/aslisk/proxyhttps/main/https.txt',
-        'https://raw.githubusercontent.com/saisuiu/uiu/main/free.txt',
-        'https://raw.githubusercontent.com/berkay-digital/Proxy-Scraper/main/proxies.txt',
-        'https://raw.githubusercontent.com/MrMarble/proxy-list/main/all.txt',
-
-
-
-    
-    ]}
-        self.proxy_dict = {'socks4':[],'socks5':[],'http':[]}
-        pass
-
-    def get_special1(self):
-        proxy_list = []
+    @staticmethod
+    def _scrape_socksnet() -> list[str]:
+        """Extract SOCKS4 proxies from https://www.socks-proxy.net/"""
         try:
-            r = requests.get("https://www.socks-proxy.net/",timeout=5)
-            part = str(r.text)
-            part = part.split("<tbody>")
-            part = part[1].split("</tbody>")
-            part = part[0].split("<tr><td>")
-            proxies = ""
-            for proxy in part:
-                proxy = proxy.split("</td><td>")
-                try:
-                    if proxies != '':
-                        proxies = proxies + proxy[0] + ":" + proxy[1] + "\n"
-                        if proxies != '':
-                            proxy_list += proxies.split('\n')
-                except:
-                    pass
-                
-            return proxy_list
+            html = requests.get("https://www.socks-proxy.net/", timeout=5).text
+            tbody = re.search(r"<tbody>(.*?)</tbody>", html, re.S)
+            if not tbody:
+                return []
+            rows = re.findall(r"<tr><td>(.*?)</td><td>(\\d+)</td>", tbody.group(1))
+            return [f"{ip}:{port}" for ip, port in rows]
         except:
             return []
 
-    def get_special2(self):
-        for i in range(json.loads(requests.get('https://proxylist.geonode.com/api/proxy-summary').text)["summary"]['proxiesOnline'] // 100):
-            proxies = json.loads(requests.get('https://proxylist.geonode.com/api/proxy-list?limit=100&page={}&sort_by=lastChecked&sort_type=desc'.format(i)).text)
-            for p in proxies['data']:
-                if p['protocols'][0] == 'https':
-                    protocol = 'http'
-                else:
-                    protocol = p['protocols'][0]
-                self.proxy_dict[protocol] .append('{}:{}'.format(p['ip'],p['port']))
-        return
-
-    def get(self):
-        self.proxy_dict['socks4'] += self.get_special1()
-        #self.get_special2()
-        self.get_extra()
-        
-        for type in ['socks4','socks5','http']:
-            for api in self.api[type]:
-                self.proxy_list = []
-                try:
-                    self.r = requests.get(api,timeout=5)
-                    if self.r.status_code == requests.codes.ok :
-                        self.proxy_list += re.findall(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{2,5}",self.r.text)
-                        self.proxy_dict[type] += list(set(self.proxy_list))
-                        print('> Get {} {} ips from {}'.format(len(self.proxy_list),type,api))
-                except:
-                    pass
-
-        print('> Get {} proxies done'.format(type))
-
-    def get_extra(self):
-        for q in range(10):
-            self.day = datetime.date.today() + datetime.timedelta(-q)
+    def _scrape_checkerproxy_archive(self) -> None:
+        """Append proxies from checkerproxy.net archive for last 10 days."""
+        today = datetime.date.today()
+        for offset in range(10):
+            day = today - datetime.timedelta(days=offset)
+            url = f"https://api.checkerproxy.net/v1/landing/archive/{day:%Y-%m-%d}"
             try:
-                self.r = requests.get('https://api.checkerproxy.net/v1/landing/archive/{}-{}-{}'.format(self.day.year,self.day.month,self.day.day))
-                if self.r.text != '[]': 
-                    self.json_result = json.loads(self.r.text)
-                    if type(self.json_result['data']["proxyList"]) == list:
-                        for i in self.json_result['data']["proxyList"]:
-                            self.proxy_dict['socks5'].append(i)
-                            self.proxy_dict['http'].append(i)
-                    elif type(self.json_result['data']["proxyList"]) == dict:
-                        for i in self.json_result['data']["proxyList"].values:
-                            self.proxy_dict['socks5'].append(i)
-                            self.proxy_dict['http'].append(i)
+                resp = requests.get(url, timeout=5)
+                data = resp.json().get("data", {}).get("proxyList", [])
+                targets = data if isinstance(data, list) else list(data.values())
+                for proxy in targets:
+                    self.proxy_dict["socks5"].add(proxy)
+                    self.proxy_dict["http"].add(proxy)
+            except:
+                continue
 
-                print('> Get {} proxy ips from checkerproxy.net {}-{}-{}'.format(len(self.json_result['data']["proxyList"]),self.day.year,self.day.month,self.day.day))
-            except:pass
-        self.proxy_dict['socks4'] = list(set(self.proxy_dict['socks4']))
-        self.proxy_dict['socks5'] = list(set(self.proxy_dict['socks5']))
-        self.proxy_dict['http'] = list(set(self.proxy_dict['http']))
-        print('> Get extra proxies done')
+    def collect(self) -> None:
+        """Fetch and dedupe proxies from all sources."""
+        # HTML-based SOCKS4
+        self.proxy_dict["socks4"].update(self._scrape_socksnet())
+        # Archive-based extra
+        self._scrape_checkerproxy_archive()
+        # API-based lists
+        for proto, urls in self.api.items():
+            for url in urls:
+                try:
+                    text = requests.get(url, timeout=5).text
+                    found = re.findall(r"\d{1,3}(?:\.\d{1,3}){3}:\d{2,5}", text)
+                    self.proxy_dict[proto].update(found)
+                except:
+                    continue
 
-    def save(self):
-        for type in ['socks4','socks5','http']:
-            self.proxy_dict[type] = list(set(self.proxy_dict[type]))
-            self.out_file = './{}.txt'.format(type)
-            f = open(self.out_file,'w')
-            for i in self.proxy_dict[type]:
-                if '#' in i or i == '\n':
-                    self.proxy_dict[type].remove(i)
-                else:
-                    f.write(i + '\n')
-            print("> Have already saved {} proxies list as ".format(len(self.proxy_dict[type])) + self.out_file)
+    def save(self) -> None:
+        """Write per-protocol .txt and consolidated CSV sheet."""
+        out_dir = Path('.')
+        # Write individual .txt files
+        for proto, proxies in self.proxy_dict.items():
+            path = out_dir / f"{proto}.txt"
+            with path.open('w') as f:
+                for p in sorted(proxies):
+                    f.write(p + "\n")
+            print(f"> Saved {len(proxies)} {proto} proxies to {path}")
+
+        # Write TestProxySheet.csv
+        csv_path = out_dir / "TestProxySheet.csv"
+        now = dt.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+        counts = {p: len(self.proxy_dict[p]) for p in ("http", "socks4", "socks5")}
+        with csv_path.open('w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([f"Generated: {now}"])
+            writer.writerow([
+                f"HTTP Count: {counts['http']}", "",
+                f"SOCKS4 Count: {counts['socks4']}", "",
+                f"SOCKS5 Count: {counts['socks5']}"
+            ])
+            writer.writerow([
+                "HTTP Proxies", "", "",
+                "SOCKS4 Proxies", "", "",
+                "SOCKS5 Proxies"
+            ])
+            max_len = max(counts.values())
+            http_list = sorted(self.proxy_dict["http"])
+            socks4_list = sorted(self.proxy_dict["socks4"])
+            socks5_list = sorted(self.proxy_dict["socks5"])
+            for i in range(max_len):
+                row = [
+                    http_list[i] if i < len(http_list) else "", "",
+                    socks4_list[i] if i < len(socks4_list) else "", "",
+                    socks5_list[i] if i < len(socks5_list) else ""
+                ]
+                writer.writerow(row)
+        print(f"> Saved combined sheet to {csv_path}")
 
 if __name__ == '__main__':
-    d = Downloadproxies()
-    d.get()
-    d.save()
+    downloader = DownloadProxies()
+    downloader.collect()
+    downloader.save()
