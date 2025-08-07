@@ -26,11 +26,11 @@ class Proxy:
         self.link = f"{protocol}://{self.address}"
 
 
-def load_proxies():
-    proxies = []
+def load_proxies() -> list[Proxy]:
+    proxies: list[Proxy] = []
     for proto, fname in PROXY_FILES.items():
         path = Path(fname)
-        if not path.is_file():
+        if not path.exists():
             continue
         for line in path.read_text().splitlines():
             if line:
@@ -55,51 +55,49 @@ async def run_checker(workers: int):
     proxies = load_proxies()
     total = len(proxies)
     results: dict[str, list[str]] = {p: [] for p in PROXY_FILES}
-    start = time.time()
+    start_time = time.time()
     semaphore = asyncio.Semaphore(workers)
 
-    async with httpx.AsyncClient() as client, Progress(
-        TextColumn("[green]I[/green]:"),
-        SpinnerColumn(),
-        TextColumn("{task.description}"),
-        BarColumn(),
-        TaskProgressColumn(),
-        TextColumn("• Elapsed:"),
-        TimeElapsedColumn(),
-        TextColumn("• ETA:"),
-        TimeRemainingColumn(),
-        TextColumn("• Left: {task.total - task.completed}"),
-        TextColumn("• {task.fields[rate]:.2f} req/s"),
-    ) as progress:
-        task = progress.add_task("Checking proxies...", total=total, rate=0.0)
+    async with httpx.AsyncClient() as client:
+        # Use a synchronous context manager for Progress
+        with Progress(
+            TextColumn("[green]I[/green]:"),
+            SpinnerColumn(),
+            TextColumn("{task.description}"),
+            BarColumn(),
+            TaskProgressColumn(),
+            TextColumn("• Elapsed:"),
+            TimeElapsedColumn(),
+            TextColumn("• ETA:"),
+            TimeRemainingColumn(),
+            TextColumn("• Left: {task.total - task.completed}"),
+            TextColumn("• {task.fields[rate]:.2f} req/s"),
+        ) as progress:
+            task = progress.add_task("Checking proxies...", total=total, rate=0.0)
 
-        async def bound_check(proxy: Proxy):
-            async with semaphore:
-                ok = await check_proxy(client, proxy)
-                progress.update(
-                    task,
-                    advance=1,
-                    rate=progress.tasks[0].completed / max((time.time() - start), 1e-6),
-                )
-                if ok:
-                    results[ok.protocol].append(ok.address)
+            async def bound_check(proxy: Proxy):
+                async with semaphore:
+                    ok = await check_proxy(client, proxy)
+                    elapsed = time.time() - start_time
+                    rate = progress.tasks[0].completed / max(elapsed, 1e-6)
+                    progress.update(task, advance=1, rate=rate)
+                    if ok:
+                        results[ok.protocol].append(ok.address)
 
-        # schedule all tasks
-        await asyncio.gather(*(bound_check(p) for p in proxies))
+            await asyncio.gather(*(bound_check(p) for p in proxies))
 
-    duration = time.time() - start
+    duration = time.time() - start_time
     avg_rate = total / duration if duration > 0 else 0.0
 
-    # write CSV, one column per protocol
+    # Write CSV with one column per protocol
+    protocols = list(PROXY_FILES)
     max_rows = max(len(v) for v in results.values())
     with open(OUTPUT_CSV, "w", newline="") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=list(PROXY_FILES))
+        writer = csv.DictWriter(csvfile, fieldnames=protocols)
         writer.writeheader()
         for i in range(max_rows):
-            row = {
-                proto: (results[proto][i] if i < len(results[proto]) else "")
-                for proto in PROXY_FILES
-            }
+            row = {proto: (results[proto][i] if i < len(results[proto]) else "")
+                   for proto in protocols}
             writer.writerow(row)
 
     print(f"\nI: Completed in {duration:.2f}s — average {avg_rate:.2f} proxies/s")
