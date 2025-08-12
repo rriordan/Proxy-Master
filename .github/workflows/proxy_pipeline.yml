@@ -36,7 +36,7 @@ jobs:
         python-version: '3.9'
         
     - name: Cache pip dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
@@ -62,7 +62,7 @@ jobs:
         fi
         
     - name: Upload proxy files as artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: proxy-results-${{ github.run_id }}
         path: |
