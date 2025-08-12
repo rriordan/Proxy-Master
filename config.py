@@ -9,12 +9,14 @@ BENCHMARK_CONFIG = {
     'TIMEOUT': 10,                       # seconds
     
     # Performance settings
-    'CONCURRENT_LIMIT': 200,             # max simultaneous tasks
-    'TOP_N_COUNT': 150,                  # number of top proxies to select
-    
-    # History and tracking
+    'CONCURRENT_LIMIT': 512,             # max simultaneous tasks (updated)
     'HISTORY_MAX_RUNS': 10,              # keep last N runs per proxy
     'MIN_TESTS_FOR_FAIL': 3,             # threshold to consider continuous failures
+    
+    # Pre-screening settings
+    'PRE_SCREEN_URL': "http://httpbin.org/ip",
+    'PRE_SCREEN_TIMEOUT': 5,             # seconds
+    'PRE_SCREEN_CONCURRENT': 512,        # concurrent limit for pre-screening
 }
 
 # File naming configuration
@@ -24,41 +26,31 @@ FILE_CONFIG = {
     'SOCKS4_FILE': "socks4.txt", 
     'SOCKS5_FILE': "socks5.txt",
     
-    # Output files
+    # Output directory
+    'OUTPUT_DIR': "Output",
+    
+    # Output files (in Output/ folder)
     'RESULTS_CSV': "proxy_benchmark_results.csv",
-    'TOP_PROXIES': "TopProxies.txt",
-    'ROTATION_LIST': "RotationList.txt",
-    'WORKING_FAST': "working-fast.txt",
-    'FAILED_PROXIES': "FailedProxies.txt",
-    'RESPONDED_PROXIES': "RespondedProxies.txt",
+    'MB_PROXIES': "MBProxies.txt",
     'HISTORY_FILE': "proxy_history.csv",
 }
 
 # GitHub Actions configuration
 GITHUB_CONFIG = {
-    'SCHEDULE_HOURS': 6,                 # Run every N hours
+    'SCHEDULE_MINUTES': 30,              # Run every N minutes (updated)
     'ARTIFACT_RETENTION_DAYS': 7,        # Keep artifacts for N days
     'AUTO_COMMIT': True,                 # Auto-commit results
 }
 
-# Proxy source priorities (for getproxy.py)
-PROXY_SOURCE_PRIORITY = {
-    'http': ['proxyscrape', 'proxy-list.download', 'openproxylist.xyz'],
-    'socks4': ['proxyscrape', 'proxy-list.download', 'openproxylist.xyz'],
-    'socks5': ['proxyscrape', 'proxy-list.download', 'openproxylist.xyz']
-}
-
-# Performance thresholds
+# Performance thresholds (updated to match script)
 PERFORMANCE_THRESHOLDS = {
-    'MIN_SPEED_MBPS': 0.1,              # Minimum acceptable speed
-    'MAX_LATENCY_SEC': 30.0,             # Maximum acceptable latency
-    'MIN_SUCCESS_RATE': 50.0,            # Minimum success rate percentage
+    'MIN_SCORE_THRESHOLD': 0.3,         # Minimum score to be considered "good"
+    'MIN_RESPONSE_RATE': 0,           # Minimum response rate percentage
+    'MIN_PROXIES_COUNT': 75,             # Minimum number of proxies to include
 }
 
 # Logging configuration
 LOGGING_CONFIG = {
     'LOG_LEVEL': 'INFO',                  # DEBUG, INFO, WARNING, ERROR
-    'LOG_FILE': 'proxy_pipeline.log',     # Log file name
     'CONSOLE_OUTPUT': True,               # Show output in console
-    'SAVE_LOGS': True,                    # Save logs to file
 }
