@@ -249,11 +249,6 @@ async def main():
     print(f"Responded proxies: {len(responded)} → {RESPONDED_FILE}")
     print(f"Top {len(top_n)} proxies saved to: {TOP_N_FILE}")
     print(f"All results saved to: {CSV_FILE}")
-    
-    # Print top 10 results
-    print(f"\nTop 10 proxies:")
-    for i, (proxy, scheme, lat, spd, sc, lt, rr, ra) in enumerate(sorted_rows[:10]):
-        print(f"{i+1:2d}. {proxy} ({scheme}) – Cur:{sc:.2f}, LT:{lt:.2f}, Rate:{rr:.1f}%, RespAvg:{ra:.2f}")
 
 if __name__ == "__main__":
     asyncio.run(main())
