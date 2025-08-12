@@ -87,3 +87,4 @@ if __name__ == "__main__":
     print("Manual Proxy Tester")
     print("Testing first 5 HTTP proxies from the list...")
     asyncio.run(test_multiple_proxies())
+

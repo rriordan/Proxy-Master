@@ -419,3 +419,4 @@ if __name__ == "__main__":
     print(f"Performance weights: Speed {SPEED_WEIGHT}, Latency {LATENCY_WEIGHT}")
     
     asyncio.run(run_advanced_checker(workers))
+

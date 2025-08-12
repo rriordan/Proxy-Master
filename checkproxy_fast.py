@@ -266,3 +266,4 @@ if __name__ == "__main__":
     print(f"Speed test URL: {SPEED_TEST_URL}")
     
     asyncio.run(run_fast_checker(workers))
+
