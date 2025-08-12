@@ -44,7 +44,7 @@ GITHUB_CONFIG = {
 
 # Performance thresholds (updated to match script)
 PERFORMANCE_THRESHOLDS = {
-    'MIN_SCORE_THRESHOLD': 0.3,         # Minimum score to be considered "good"
+    'MIN_SCORE_THRESHOLD': 0,         # Minimum score to be considered "good"
     'MIN_RESPONSE_RATE': 0,           # Minimum response rate percentage
     'MIN_PROXIES_COUNT': 75,             # Minimum number of proxies to include
 }
