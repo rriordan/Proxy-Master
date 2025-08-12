@@ -1,9 +1,9 @@
 name: Proxy Pipeline
 
 on:
-  # Run automatically every 6 hours
+  # Run automatically every 30 minutes
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '*/30 * * * *'
   
   # Allow manual triggering
   workflow_dispatch:
@@ -66,14 +66,9 @@ jobs:
       with:
         name: proxy-results-${{ github.run_id }}
         path: |
+          Output/
           *.txt
           *.csv
-          TopProxies.txt
-          RotationList.txt
-          working-fast.txt
-          FailedProxies.txt
-          RespondedProxies.txt
-          proxy_history.csv
         retention-days: 7
         
     - name: Commit and push results
