@@ -23,19 +23,19 @@ MB_PROXIES_FILE     = os.path.join(OUTPUT_DIR, "MBProxies.txt")
 TEST_URL            = "http://ipv4.download.thinkbroadband.com/100MB.zip"
 CHUNK_RANGE         = "bytes=0-10485759"  # first 10 MB
 TIMEOUT             = 10                  # seconds
-CONCURRENT_LIMIT    = 500                 # max simultaneous tasks
+CONCURRENT_LIMIT    = 512                 # max simultaneous tasks
 HISTORY_MAX_RUNS    = 10                  # keep last N runs per proxy
 MIN_TESTS_FOR_FAIL  = 3                   # threshold to consider continuous failures
 
 # PERFORMANCE CUTOFF SETTINGS
 MIN_SCORE_THRESHOLD = 0.5                 # Minimum score to be considered "good"
-MIN_RESPONSE_RATE   = 50.0                # Minimum response rate percentage
+MIN_RESPONSE_RATE   = 1.0                # Minimum response rate percentage
 MIN_PROXIES_COUNT   = 75                  # Minimum number of proxies to include
 
 # PRE-SCREENING SETTINGS
 PRE_SCREEN_URL      = "http://httpbin.org/ip"  # Lightweight test URL
 PRE_SCREEN_TIMEOUT  = 5                   # Quick timeout for pre-screening
-PRE_SCREEN_CONCURRENT = 500               # Concurrent limit for pre-screening
+PRE_SCREEN_CONCURRENT = 512               # Concurrent limit for pre-screening
 
 # GLOBAL RESULTS
 good, bad = [], []
@@ -234,28 +234,50 @@ def save_mb_proxies(sorted_rows):
     # Sort by score (best to worst)
     qualified_proxies.sort(key=lambda x: x[1], reverse=True)
     
-    # Simple threshold-based approach with minimum count guarantee
+    # Smart fallback approach: ensure minimum count while prioritizing quality
     total_qualified = len(qualified_proxies)
     
-    if total_qualified <= MIN_PROXIES_COUNT:
-        # If we have fewer qualified proxies than minimum, include all of them
-        final_proxies = qualified_proxies
-        print(f"Only {total_qualified} proxies met quality criteria (below minimum {MIN_PROXIES_COUNT})")
-        print(f"Including all {total_qualified} qualified proxies")
-    else:
-        # If we have more than minimum, use all qualified proxies
+    if total_qualified >= MIN_PROXIES_COUNT:
+        # We have enough qualified proxies, use only the qualified ones
         final_proxies = qualified_proxies
         print(f"Found {total_qualified} qualified proxies (above minimum {MIN_PROXIES_COUNT})")
         print(f"Including all {total_qualified} qualified proxies")
+    else:
+        # We don't have enough qualified proxies, need to include some fallback proxies
+        print(f"Only {total_qualified} proxies met quality criteria (below minimum {MIN_PROXIES_COUNT})")
+        print(f"Adding fallback proxies to reach minimum {MIN_PROXIES_COUNT}")
+        
+        # Start with all qualified proxies
+        final_proxies = qualified_proxies.copy()
+        
+        # Find additional proxies that succeeded in testing but didn't meet quality thresholds
+        fallback_proxies = []
+        for proxy, scheme, lat, spd, sc, lt, rr, ra in sorted_rows:
+            # Include proxies that succeeded in testing (have latency/speed data) but don't meet quality thresholds
+            if (proxy not in [p[0] for p in final_proxies] and  # Not already included
+                lat is not None and spd is not None):  # Succeeded in current test
+                fallback_proxies.append((proxy, sc))
+        
+        # Sort fallback proxies by score (best to worst)
+        fallback_proxies.sort(key=lambda x: x[1], reverse=True)
+        
+        # Add fallback proxies until we reach the minimum
+        needed_fallback = MIN_PROXIES_COUNT - total_qualified
+        fallback_to_add = fallback_proxies[:needed_fallback]
+        
+        final_proxies.extend(fallback_to_add)
+        
+        print(f"Added {len(fallback_to_add)} fallback proxies (total: {len(final_proxies)})")
+        print(f"Fallback proxies don't meet strict quality criteria but succeeded in testing")
     
     # Save to MBProxies.txt (IP:port format only)
     with open(MB_PROXIES_FILE, "w") as f:
         for proxy, score in final_proxies:
             f.write(f"{proxy}\n")
     
-    print(f"Saved {len(final_proxies)} qualified proxies to {MB_PROXIES_FILE}")
-    print(f"Performance criteria: Score >= {MIN_SCORE_THRESHOLD}, Response rate >= {MIN_RESPONSE_RATE}%")
-    print(f"Result: {len(final_proxies)}/{total_qualified} qualified proxies included")
+    print(f"Saved {len(final_proxies)} proxies to {MB_PROXIES_FILE}")
+    print(f"Quality criteria: Score >= {MIN_SCORE_THRESHOLD}, Response rate >= {MIN_RESPONSE_RATE}%")
+    print(f"Result: {len(final_proxies)} proxies included (ensuring minimum {MIN_PROXIES_COUNT})")
     
     return len(final_proxies)
 
