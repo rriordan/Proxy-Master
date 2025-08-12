@@ -2,3 +2,4 @@ httpx>=0.24.0
 rich>=13.0.0
 pysocks>=1.7.1
 asyncio
+tqdm>=4.65.0
