@@ -27,7 +27,7 @@ RESPONDED_FILE      = "RespondedProxies.txt"
 TEST_URL            = "http://ipv4.download.thinkbroadband.com/100MB.zip"
 CHUNK_RANGE         = "bytes=0-10485759"  # first 10 MB
 TIMEOUT             = 10                  # seconds
-CONCURRENT_LIMIT    = 200                 # max simultaneous tasks
+CONCURRENT_LIMIT    = 500                 # max simultaneous tasks
 TOP_N_COUNT         = 150                 # number of top proxies to select
 HISTORY_MAX_RUNS    = 10                  # keep last N runs per proxy
 MIN_TESTS_FOR_FAIL  = 3                   # threshold to consider continuous failures
@@ -35,7 +35,7 @@ MIN_TESTS_FOR_FAIL  = 3                   # threshold to consider continuous fai
 # PRE-SCREENING SETTINGS
 PRE_SCREEN_URL      = "http://httpbin.org/ip"  # Lightweight test URL
 PRE_SCREEN_TIMEOUT  = 5                   # Quick timeout for pre-screening
-PRE_SCREEN_CONCURRENT = 100               # Concurrent limit for pre-screening
+PRE_SCREEN_CONCURRENT = 500               # Concurrent limit for pre-screening
 
 # GLOBAL RESULTS
 good, bad = [], []
@@ -124,6 +124,68 @@ def load_proxies(path: str):
         print(f"Warning: {path} not found. Skipping {path.split('.')[0]} proxies.")
         return []
 
+def remove_duplicates(http_list: list, socks5_list: list, socks4_list: list) -> tuple:
+    """Remove duplicate IP:port combinations, prioritizing SOCKS5 when duplicates exist."""
+    print("Checking for duplicate IP:port combinations...")
+    
+    # Create sets of IP:port combinations for each protocol
+    http_ips = set(http_list)
+    socks5_ips = set(socks5_list)
+    socks4_ips = set(socks4_list)
+    
+    # Find all unique IP:port combinations
+    all_ips = http_ips | socks5_ips | socks4_ips
+    
+    # Track which protocol each IP:port came from originally
+    ip_sources = {}
+    for ip in http_ips:
+        ip_sources[ip] = 'http'
+    for ip in socks5_ips:
+        ip_sources[ip] = 'socks5'
+    for ip in socks4_ips:
+        ip_sources[ip] = 'socks4'
+    
+    # Resolve duplicates by prioritizing SOCKS5
+    final_http = []
+    final_socks5 = []
+    final_socks4 = []
+    
+    duplicates_found = 0
+    
+    for ip in all_ips:
+        sources = []
+        if ip in http_ips:
+            sources.append('http')
+        if ip in socks5_ips:
+            sources.append('socks5')
+        if ip in socks4_ips:
+            sources.append('socks4')
+        
+        if len(sources) > 1:
+            duplicates_found += 1
+            # Prioritize SOCKS5, then HTTP, then SOCKS4
+            if 'socks5' in sources:
+                final_socks5.append(ip)
+            elif 'http' in sources:
+                final_http.append(ip)
+            else:
+                final_socks4.append(ip)
+        else:
+            # No duplicates, add to appropriate list
+            protocol = sources[0]
+            if protocol == 'http':
+                final_http.append(ip)
+            elif protocol == 'socks5':
+                final_socks5.append(ip)
+            else:  # socks4
+                final_socks4.append(ip)
+    
+    if duplicates_found > 0:
+        print(f"Found {duplicates_found} duplicate IP:port combinations")
+        print(f"Duplicates resolved by prioritizing SOCKS5 > HTTP > SOCKS4")
+    
+    return final_http, final_socks5, final_socks4
+
 def load_history():
     history = defaultdict(lambda: deque(maxlen=HISTORY_MAX_RUNS))
     if os.path.exists(HISTORY_FILE):
@@ -161,6 +223,13 @@ async def main():
     print(f"Loaded {len(http_list)} HTTP, {len(socks5_list)} SOCKS5, {len(socks4_list)} SOCKS4 proxies")
     print(f"Total proxies loaded: {total_proxies}")
 
+    # Remove duplicate IP:port combinations
+    http_list, socks5_list, socks4_list = remove_duplicates(http_list, socks5_list, socks4_list)
+    
+    total_proxies_after_dedup = len(http_list) + len(socks5_list) + len(socks4_list)
+    print(f"After removing duplicates: {len(http_list)} HTTP, {len(socks5_list)} SOCKS5, {len(socks4_list)} SOCKS4 proxies")
+    print(f"Total proxies after deduplication: {total_proxies_after_dedup}")
+
     # Pre-screen proxies to filter out dead ones
     print("\n=== PRE-SCREENING PHASE ===")
     http_proxies_to_test = await pre_screen_proxies(http_list, "http")
@@ -173,8 +242,8 @@ async def main():
         return
 
     print(f"\n=== PERFORMANCE TESTING PHASE ===")
-    print(f"Proxies to test: {len(all_proxies_to_test)} (filtered from {total_proxies} total)")
-    print(f"Filtered out: {total_proxies - len(all_proxies_to_test)} dead/unresponsive proxies")
+    print(f"Proxies to test: {len(all_proxies_to_test)} (filtered from {total_proxies_after_dedup} total)")
+    print(f"Filtered out: {total_proxies_after_dedup - len(all_proxies_to_test)} dead/unresponsive proxies")
 
     all_results = []
     if http_proxies_to_test:
@@ -243,7 +312,9 @@ async def main():
     elapsed = perf_counter() - t0
     print(f"\n=== BENCHMARK SUMMARY ===")
     print(f"Total time: {elapsed:.2f}s")
-    print(f"Pre-screening: Filtered {total_proxies - len(all_proxies_to_test)} dead proxies from {total_proxies} total")
+    print(f"Original proxies: {total_proxies}")
+    print(f"After deduplication: {total_proxies_after_dedup}")
+    print(f"Pre-screening: Filtered {total_proxies_after_dedup - len(all_proxies_to_test)} dead proxies from {total_proxies_after_dedup} total")
     print(f"Performance testing: {len(good)} good, {len(bad)} bad")
     print(f"Failed proxies:    {len(failed)} → {FAILED_FILE}")
     print(f"Responded proxies: {len(responded)} → {RESPONDED_FILE}")
