@@ -61,6 +61,42 @@ def check_required_files():
     print(f"\n✅ All required proxy files found: {', '.join(required_files)}")
     return True
 
+def check_output_files():
+    """Check if output files were created in the Output folder."""
+    output_dir = Path('Output')
+    if not output_dir.exists():
+        print(f"\n❌ Output directory not found: {output_dir}")
+        return False
+    
+    expected_files = [
+        'MBProxies.txt',
+        'proxy_benchmark_results.csv', 
+        'proxy_history.csv'
+    ]
+    
+    found_files = []
+    missing_files = []
+    
+    for file in expected_files:
+        file_path = output_dir / file
+        if file_path.exists():
+            size = file_path.stat().st_size
+            found_files.append(f"  ✅ {file} ({size} bytes)")
+        else:
+            missing_files.append(f"  ❌ {file} (not found)")
+    
+    print(f"\nOutput files in {output_dir}/:")
+    for file_info in found_files:
+        print(file_info)
+    
+    if missing_files:
+        print("\nMissing files:")
+        for file_info in missing_files:
+            print(file_info)
+        return False
+    
+    return True
+
 def main():
     """Main pipeline execution."""
     print("🚀 Proxy Pipeline Starting...")
@@ -81,31 +117,16 @@ def main():
         print("Proxy files were created, but benchmarking failed.")
         sys.exit(1)
     
+    # Check if output files were created
+    if not check_output_files():
+        print("\n⚠️  Warning: Some expected output files are missing.")
+        print("The pipeline may not have completed fully.")
+    
     # Pipeline completed successfully
     print(f"\n{'='*60}")
     print("🎉 Proxy Pipeline Completed Successfully!")
     print(f"{'='*60}")
-    print("\nGenerated files:")
-    
-    # List generated files
-    output_files = [
-        'proxy_benchmark_results.csv',
-        'TopProxies.txt', 
-        'RotationList.txt',
-        'working-fast.txt',
-        'FailedProxies.txt',
-        'RespondedProxies.txt',
-        'proxy_history.csv'
-    ]
-    
-    for file in output_files:
-        if Path(file).exists():
-            size = Path(file).stat().st_size
-            print(f"  ✅ {file} ({size} bytes)")
-        else:
-            print(f"  ❌ {file} (not found)")
-    
-    print(f"\nPipeline completed at: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print("\nPipeline completed at: {time.strftime('%Y-%m-%d %H:%M:%S')}")
 
 if __name__ == "__main__":
     main()
