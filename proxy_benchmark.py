@@ -15,22 +15,22 @@ from collections import defaultdict, deque
 PROXY_FILE_HTTP     = "http.txt"
 PROXY_FILE_SOCKS5   = "socks5.txt"
 PROXY_FILE_SOCKS4   = "socks4.txt"
-CSV_FILE            = "proxy_benchmark_results.csv"
-GOOD_FILE           = "working-fast.txt"
-BAD_FILE            = "bad.txt"
-TOP_N_FILE          = "TopProxies.txt"
-ROTATION_FILE       = "RotationList.txt"
-HISTORY_FILE        = "proxy_history.csv"
-FAILED_FILE         = "FailedProxies.txt"
-RESPONDED_FILE      = "RespondedProxies.txt"
+OUTPUT_DIR          = "Output"
+CSV_FILE            = os.path.join(OUTPUT_DIR, "proxy_benchmark_results.csv")
+HISTORY_FILE        = os.path.join(OUTPUT_DIR, "proxy_history.csv")
+MB_PROXIES_FILE     = os.path.join(OUTPUT_DIR, "MBProxies.txt")
 
 TEST_URL            = "http://ipv4.download.thinkbroadband.com/100MB.zip"
 CHUNK_RANGE         = "bytes=0-10485759"  # first 10 MB
 TIMEOUT             = 10                  # seconds
 CONCURRENT_LIMIT    = 500                 # max simultaneous tasks
-TOP_N_COUNT         = 150                 # number of top proxies to select
 HISTORY_MAX_RUNS    = 10                  # keep last N runs per proxy
 MIN_TESTS_FOR_FAIL  = 3                   # threshold to consider continuous failures
+
+# PERFORMANCE CUTOFF SETTINGS
+MIN_SCORE_THRESHOLD = 0.5                 # Minimum score to be considered "good"
+MIN_RESPONSE_RATE   = 50.0                # Minimum response rate percentage
+MIN_PROXIES_COUNT   = 75                  # Minimum number of proxies to include
 
 # PRE-SCREENING SETTINGS
 PRE_SCREEN_URL      = "http://httpbin.org/ip"  # Lightweight test URL
@@ -41,6 +41,12 @@ PRE_SCREEN_CONCURRENT = 500               # Concurrent limit for pre-screening
 good, bad = [], []
 sem = asyncio.Semaphore(CONCURRENT_LIMIT)
 pre_screen_sem = asyncio.Semaphore(PRE_SCREEN_CONCURRENT)
+
+def ensure_output_directory():
+    """Create the Output directory if it doesn't exist."""
+    if not os.path.exists(OUTPUT_DIR):
+        os.makedirs(OUTPUT_DIR)
+        print(f"Created output directory: {OUTPUT_DIR}")
 
 async def pre_screen_proxy(session, proxy: str, scheme: str) -> tuple:
     """Quick connectivity test to filter out dead proxies before performance testing."""
@@ -206,9 +212,59 @@ def save_history(history):
             for score, success in entries:
                 writer.writerow([proxy, int(time()), f"{score:.2f}", '1' if success else '0'])
 
+def save_mb_proxies(sorted_rows):
+    """Save the best performing proxies to MBProxies.txt in IP:port format."""
+    # Filter proxies based on performance criteria
+    qualified_proxies = []
+    
+    for proxy, scheme, lat, spd, sc, lt, rr, ra in sorted_rows:
+        # Only include proxies that:
+        # 1. Have a current score above threshold
+        # 2. Have a good response rate
+        # 3. Actually succeeded in the current test (have latency and speed data)
+        if (sc >= MIN_SCORE_THRESHOLD and 
+            rr >= MIN_RESPONSE_RATE and 
+            lat is not None and spd is not None):
+            qualified_proxies.append((proxy, sc))
+    
+    if not qualified_proxies:
+        print("Warning: No proxies met the quality criteria!")
+        return 0
+    
+    # Sort by score (best to worst)
+    qualified_proxies.sort(key=lambda x: x[1], reverse=True)
+    
+    # Simple threshold-based approach with minimum count guarantee
+    total_qualified = len(qualified_proxies)
+    
+    if total_qualified <= MIN_PROXIES_COUNT:
+        # If we have fewer qualified proxies than minimum, include all of them
+        final_proxies = qualified_proxies
+        print(f"Only {total_qualified} proxies met quality criteria (below minimum {MIN_PROXIES_COUNT})")
+        print(f"Including all {total_qualified} qualified proxies")
+    else:
+        # If we have more than minimum, use all qualified proxies
+        final_proxies = qualified_proxies
+        print(f"Found {total_qualified} qualified proxies (above minimum {MIN_PROXIES_COUNT})")
+        print(f"Including all {total_qualified} qualified proxies")
+    
+    # Save to MBProxies.txt (IP:port format only)
+    with open(MB_PROXIES_FILE, "w") as f:
+        for proxy, score in final_proxies:
+            f.write(f"{proxy}\n")
+    
+    print(f"Saved {len(final_proxies)} qualified proxies to {MB_PROXIES_FILE}")
+    print(f"Performance criteria: Score >= {MIN_SCORE_THRESHOLD}, Response rate >= {MIN_RESPONSE_RATE}%")
+    print(f"Result: {len(final_proxies)}/{total_qualified} qualified proxies included")
+    
+    return len(final_proxies)
+
 async def main():
     print("Starting proxy benchmark...")
     print(f"Loading proxies from: {PROXY_FILE_HTTP}, {PROXY_FILE_SOCKS5}, {PROXY_FILE_SOCKS4}")
+    
+    # Ensure output directory exists
+    ensure_output_directory()
     
     t0 = perf_counter()
     http_list   = load_proxies(PROXY_FILE_HTTP)
@@ -258,21 +314,6 @@ async def main():
         history[proxy].append((sc, success))
     save_history(history)
 
-    # Identify failed and responded
-    failed = []
-    responded = []
-    for proxy, entries in history.items():
-        if len(entries) >= MIN_TESTS_FOR_FAIL:
-            if all(not succ for _, succ in list(entries)[-MIN_TESTS_FOR_FAIL:]):
-                failed.append(proxy)
-        if any(succ for _, succ in entries):
-            responded.append(proxy)
-
-    with open(FAILED_FILE, "w") as f:
-        f.write("\n".join(failed))
-    with open(RESPONDED_FILE, "w") as f:
-        f.write("\n".join(responded))
-
     # Prepare CSV rows
     rows = []
     for proxy, scheme, lat, spd, sc, success in all_results:
@@ -285,6 +326,7 @@ async def main():
 
     sorted_rows = sorted(rows, key=lambda r: r[5], reverse=True)
 
+    # Save detailed CSV results
     with open(CSV_FILE, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow([
@@ -301,13 +343,8 @@ async def main():
                 f"{rr:.1f}", f"{ra:.2f}"
             ])
 
-    top_n = sorted_rows[:TOP_N_COUNT]
-    with open(TOP_N_FILE, "w") as f:
-        for proxy, scheme, *_ in top_n:
-            f.write(f"{scheme}://{proxy}\n")
-    with open(ROTATION_FILE, "w") as f:
-        for proxy, scheme, *_ in sorted_rows:
-            f.write(f"{scheme}://{proxy}\n")
+    # Save MBProxies.txt with best performing proxies
+    mb_proxies_count = save_mb_proxies(sorted_rows)
 
     elapsed = perf_counter() - t0
     print(f"\n=== BENCHMARK SUMMARY ===")
@@ -316,10 +353,10 @@ async def main():
     print(f"After deduplication: {total_proxies_after_dedup}")
     print(f"Pre-screening: Filtered {total_proxies_after_dedup - len(all_proxies_to_test)} dead proxies from {total_proxies_after_dedup} total")
     print(f"Performance testing: {len(good)} good, {len(bad)} bad")
-    print(f"Failed proxies:    {len(failed)} → {FAILED_FILE}")
-    print(f"Responded proxies: {len(responded)} → {RESPONDED_FILE}")
-    print(f"Top {len(top_n)} proxies saved to: {TOP_N_FILE}")
-    print(f"All results saved to: {CSV_FILE}")
+    print(f"Qualified proxies: {mb_proxies_count} → {MB_PROXIES_FILE}")
+    print(f"Detailed results: {CSV_FILE}")
+    print(f"Proxy history: {HISTORY_FILE}")
+    print(f"All output files are now saved to the '{OUTPUT_DIR}' folder")
 
 if __name__ == "__main__":
     asyncio.run(main())
