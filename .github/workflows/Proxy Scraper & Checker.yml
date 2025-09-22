@@ -34,15 +34,16 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Optimized Checkout (Python files only)
+      - name: Optimized Checkout
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 1  # Only latest commit
+          fetch-depth: 1
           sparse-checkout: |
             *.py
             requirements.txt
             .github/
+            *.txt
           sparse-checkout-cone-mode: false
 
       - name: Setup Python
@@ -60,11 +61,12 @@ jobs:
             pip install requests rich pysocks
           fi
 
-      - name: Configure Git (lightweight)
+      - name: Configure Git
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git config --local core.autocrlf false
+          git config --local advice.updateSparsePath false
 
       - name: Run Proxy Scraper
         if: ${{ inputs.operation == 'scrape_only' || inputs.operation == 'scrape_and_check' || github.event_name == 'schedule' }}
@@ -80,27 +82,42 @@ jobs:
           python checkproxy.py ${{ inputs.workers || 128 }}
           echo "✅ Proxy checking completed"
 
+      - name: Update Sparse Checkout for Generated Files
+        if: ${{ (inputs.commit_changes != false && github.event_name == 'workflow_dispatch') || github.event_name == 'schedule' }}
+        run: |
+          echo "📝 Adding generated files to sparse-checkout..."
+          # Add any newly generated txt files to sparse checkout
+          for file in *.txt; do
+            if [[ -f "$file" ]]; then
+              git sparse-checkout add "$file" 2>/dev/null || true
+            fi
+          done
+          git sparse-checkout reapply
+
       - name: Display Results Summary
         run: |
           echo "📊 Operation Summary:"
           echo "Operation: ${{ inputs.operation || 'scrape_only (scheduled)' }}"
           
+          total_proxies=0
           for file in *.txt; do
-            if [[ -f "$file" ]]; then
+            if [[ -f "$file" && "$file" != "requirements.txt" ]]; then
               lines=$(wc -l < "$file" 2>/dev/null || echo "0")
               size=$(du -h "$file" | cut -f1)
               echo "📄 $file: $lines proxies ($size)"
+              total_proxies=$((total_proxies + lines))
             fi
           done
+          echo "🎯 Total proxies: $total_proxies"
 
-      - name: Commit and Push (efficient)
+      - name: Commit and Push Changes
         if: ${{ (inputs.commit_changes != false && github.event_name == 'workflow_dispatch') || github.event_name == 'schedule' }}
         run: |
           if [[ -n $(git status --porcelain "*.txt") ]]; then
-            echo "📝 Committing only proxy files..."
+            echo "📝 Committing proxy files..."
             
-            # Only add .txt files (proxy results)
-            git add *.txt
+            # Use --sparse flag to add files outside sparse-checkout
+            git add --sparse *.txt
             
             if [[ "${{ inputs.operation }}" == "scrape_only" || "${{ github.event_name }}" == "schedule" ]]; then
               commit_msg="🔍 Update proxies - Scraping completed"
@@ -113,7 +130,7 @@ jobs:
             commit_msg="$commit_msg ($(date '+%Y-%m-%d %H:%M UTC'))"
             git commit -m "$commit_msg"
             
-            echo "📤 Pushing only committed changes..."
+            echo "📤 Pushing changes..."
             git push origin HEAD:${{ github.ref_name }}
             echo "✅ Changes pushed successfully"
           else
