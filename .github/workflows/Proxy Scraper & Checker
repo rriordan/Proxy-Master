@@ -1,0 +1,116 @@
+name: Proxy Scraper & Checker
+
+on:
+  # Manual trigger with options
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: 'Choose operation to run'
+        required: true
+        type: choice
+        default: 'scrape_only'
+        options:
+          - 'scrape_only'
+          - 'check_only'
+          - 'scrape_and_check'
+      workers:
+        description: 'Number of workers for proxy checking (default: 128)'
+        required: false
+        type: number
+        default: 128
+      commit_changes:
+        description: 'Commit and push changes to repository'
+        required: true
+        type: boolean
+        default: true
+  
+  # Scheduled runs (optional - runs scraper only every 3 hours)
+  schedule:
+    - cron: '0 */3 * * *'  # Every 3 hours
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  proxy-operations:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests rich pysocks
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git pull origin ${{ github.ref_name }}
+
+      - name: Run Proxy Scraper
+        if: ${{ inputs.operation == 'scrape_only' || inputs.operation == 'scrape_and_check' || github.event_name == 'schedule' }}
+        run: |
+          echo "🔍 Starting proxy scraping..."
+          python getproxy.py
+          echo "✅ Proxy scraping completed"
+
+      - name: Run Proxy Checker
+        if: ${{ inputs.operation == 'check_only' || inputs.operation == 'scrape_and_check' }}
+        run: |
+          echo "🔧 Starting proxy checking with ${{ inputs.workers || 128 }} workers..."
+          python checkproxy.py ${{ inputs.workers || 128 }}
+          echo "✅ Proxy checking completed"
+
+      - name: Display Results Summary
+        run: |
+          echo "📊 Operation Summary:"
+          echo "Operation: ${{ inputs.operation || 'scrape_only (scheduled)' }}"
+          if [[ "${{ inputs.operation }}" == "check_only" || "${{ inputs.operation }}" == "scrape_and_check" ]]; then
+            echo "Workers used: ${{ inputs.workers || 128 }}"
+          fi
+          
+          # Count files and their contents
+          for file in *.txt; do
+            if [[ -f "$file" ]]; then
+              lines=$(wc -l < "$file" 2>/dev/null || echo "0")
+              echo "📄 $file: $lines proxies"
+            fi
+          done
+
+      - name: Commit and Push Changes
+        if: ${{ (inputs.commit_changes != false && github.event_name == 'workflow_dispatch') || github.event_name == 'schedule' }}
+        run: |
+          # Check if there are changes to commit
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "📝 Committing changes..."
+            git add -A
+            
+            # Create commit message based on operation
+            if [[ "${{ inputs.operation }}" == "scrape_only" || "${{ github.event_name }}" == "schedule" ]]; then
+              commit_msg="🔍 Update proxies - Scraping completed"
+            elif [[ "${{ inputs.operation }}" == "check_only" ]]; then
+              commit_msg="🔧 Update proxies - Checking completed (${{ inputs.workers || 128 }} workers)"
+            else
+              commit_msg="🚀 Update proxies - Scraping & Checking completed (${{ inputs.workers || 128 }} workers)"
+            fi
+            
+            commit_msg="$commit_msg ($(date '+%Y-%m-%d %H:%M UTC'))"
+            git commit -m "$commit_msg"
+            
+            echo "📤 Pushing changes..."
+            git push origin ${{ github.ref_name }}
+            echo "✅ Changes pushed successfully"
+          else
+            echo "ℹ️ No changes to commit"
+          fi
