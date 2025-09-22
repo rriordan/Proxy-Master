@@ -6,6 +6,7 @@ class Downloadproxies():
     def __init__(self) -> None:
         self.api = {
     'socks4':[
+        #Original
         "https://api.proxyscrape.com/?request=displayproxies&proxytype=socks4&timeout=10000&country=all&simplified=true",
         "https://www.proxy-list.download/api/v1/get?type=socks4",
         "https://api.openproxylist.xyz/socks4.txt",
@@ -31,10 +32,18 @@ class Downloadproxies():
         'https://raw.githubusercontent.com/vakhov/fresh-proxy-list/master/socks4.txt',
         'https://raw.githubusercontent.com/zloi-user/hideip.me/main/socks4.txt',
         'https://raw.githubusercontent.com/ErcinDedeoglu/proxies/main/proxies/socks4.txt',
-        'https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/protocols/socks4/data.txt'
+        'https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/protocols/socks4/data.txt',
+        
+        #Added
+        'https://raw.githubusercontent.com/ALIILAPRO/Proxy/refs/heads/main/socks4.txt',
+        'https://raw.githubusercontent.com/ProxyScraper/ProxyScraper/refs/heads/main/socks4.txt',
+        'https://raw.githubusercontent.com/elliottophellia/proxylist/refs/heads/master/results/socks4/global/socks4_checked.txt',
+        'https://raw.githubusercontent.com/mzyui/proxy-list/refs/heads/main/socks4.txt'
 
+        
          ],
      'socks5': [
+        #Original
         "https://api.proxyscrape.com/v2/?request=getproxies&protocol=socks5&timeout=10000&country=all&simplified=true",
         "https://www.proxy-list.download/api/v1/get?type=socks5",
         "https://api.openproxylist.xyz/socks5.txt",
@@ -62,10 +71,17 @@ class Downloadproxies():
         'https://raw.githubusercontent.com/vakhov/fresh-proxy-list/master/socks5.txt',
         'https://raw.githubusercontent.com/zloi-user/hideip.me/main/socks5.txt',
         'https://raw.githubusercontent.com/ErcinDedeoglu/proxies/main/proxies/socks5.txt',
-        'https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/protocols/socks5/data.txt'
+        'https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/protocols/socks5/data.txt',
+        
+         #Added
+        'https://raw.githubusercontent.com/ALIILAPRO/Proxy/refs/heads/main/socks5.txt',
+        'https://raw.githubusercontent.com/ProxyScraper/ProxyScraper/refs/heads/main/socks5.txt',
+        'https://raw.githubusercontent.com/elliottophellia/proxylist/refs/heads/master/results/socks5/global/socks5_checked.txt',
+        'https://raw.githubusercontent.com/mzyui/proxy-list/refs/heads/main/socks5.txt'
 
          ],
      'http': [
+        #Original
         "https://api.proxyscrape.com/?request=displayproxies&proxytype=http&timeout=10000&country=all&simplified=true",
         "https://www.proxy-list.download/api/v1/get?type=http",
         'https://www.proxy-list.download/api/v1/get?type=https'
@@ -109,6 +125,15 @@ class Downloadproxies():
         'https://raw.githubusercontent.com/saisuiu/uiu/main/free.txt',
         'https://raw.githubusercontent.com/berkay-digital/Proxy-Scraper/main/proxies.txt',
         'https://raw.githubusercontent.com/MrMarble/proxy-list/main/all.txt',
+         
+        #Added
+        'https://raw.githubusercontent.com/ALIILAPRO/Proxy/refs/heads/main/http.txt',
+        'https://raw.githubusercontent.com/ProxyScraper/ProxyScraper/refs/heads/main/http.txt',
+        'https://raw.githubusercontent.com/elliottophellia/proxylist/refs/heads/master/results/http/global/http_checked.txt',
+        'https://raw.githubusercontent.com/mzyui/proxy-list/refs/heads/main/http.txt',
+        'https://raw.githubusercontent.com/saisuiu/Lionkings-Http-Proxys-Proxies/refs/heads/main/free.txt',
+        'https://raw.githubusercontent.com/saisuiu/Lionkings-Http-Proxys-Proxies/refs/heads/main/cnfree.txt',
+        'https://raw.githubusercontent.com/elliottophellia/proxylist/refs/heads/master/results/mix_checked.txt',
 
 
 
